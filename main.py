@@ -28,7 +28,7 @@ import aiohttp
 import slixmpp
 from slixmpp.types import PresenceArgs
 
-XEP_PATTERN = re.compile(r'(?i)\bxep[- ]?(\d+)')
+XEP_PATTERN = re.compile(r'(?i)(?<!\S)xep[- ]?(\d+)')
 
 xeps_by_number: dict[int, ET.Element] = {}
 xeps_by_title: dict[str, ET.Element] = {}
