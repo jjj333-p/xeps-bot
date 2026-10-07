@@ -30,3 +30,24 @@ XEP-0359: *Unique and Stable Stanza IDs* (Experimental, last revised 2023-02-20,
 ```
 
 - `!refresh` refreshes the index. The index is refreshed daily automatically.
+
+## Configuration
+Create a `login.json` file in the project root:
+```json
+{
+  "jid": "bot@example.com",
+  "password": "your-xmpp-password",
+  "displayname": "XEPs Bot",
+  "rooms": [
+    "room@conference.example.com"
+  ]
+}
+```
+### `login.json` parameters
+
+| Parameter        | Description                                       |
+|------------------|---------------------------------------------------|
+| `jid`            | The XMPP account JID used by the bot.             |
+| `password`       | Password for the XMPP account.                    |
+| `displayname`    | Nickname used when joining MUC rooms.             |
+| `rooms`          | List of MUC room JIDs to join on startup.         |
