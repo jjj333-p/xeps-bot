@@ -209,7 +209,7 @@ class MUCBot(slixmpp.ClientXMPP):
         try:
             await self.plugin['xep_0045'].join_muc_wait(
                 room_jid,
-                self.boundjid.user,  # Use your JID's user part as the nickname
+                self.nick,
                 presence_options=PresenceArgs(
                     pstatus=status_msg
                 ),
