@@ -74,7 +74,7 @@ def create_preview_txt(xep : ET.Element):
     # form nice text
     out = f"XEP-{number:04d}: *{title}* ({status}, last revised {last_rev_date}, v{last_rev_version}) https://xmpp.org/extensions/xep-{number:04d}.html"
     if supersededby_list is not None:
-        out += f"superseded by {', '.join(spec.text or "?" for spec in supersededby_list)}"
+        out += f"\nsuperseded by {', '.join(spec.text or "?" for spec in supersededby_list)}"
 
     return out
 
