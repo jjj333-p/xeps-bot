@@ -61,7 +61,8 @@ async def fetch_xeps():
 
 def create_preview_txt(xep : ET.Element):
     # traverse xml
-    number = int(xep.findtext("number") or "-1")
+    num_txt = xep.findtext("number")
+    number = int(num_txt if num_txt is not None and num_txt.isdigit() else "0")
     title = xep.findtext("title")
     status = xep.findtext("status")
     last_rev = xep.find("last-revision")
