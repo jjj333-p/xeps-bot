@@ -283,7 +283,7 @@ class MUCBot(slixmpp.ClientXMPP):
                 mtype=msg['type']
             )
         else:
-            xep_nums = XEP_PATTERN.findall(cleaned_body)
+            xep_nums = set(XEP_PATTERN.findall(cleaned_body))
 
             for xep_num in xep_nums:
                 xep = xeps_by_number.get(int(xep_num))
