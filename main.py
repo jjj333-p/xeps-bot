@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import json
+import time
 import xml.etree.ElementTree as ET
 import re
 import logging
@@ -142,6 +143,8 @@ def remove_fallbacks(body: str, fallbacks: Iterable[str]) -> str:
 with open("./login.json", encoding="utf-8") as lf:
     login = json.load(lf)
 
+last_defined_timestamp: dict[tuple[str, int], float] = {}
+
 class MUCBot(slixmpp.ClientXMPP):
 
     def __init__(self, jid, password, rooms, nick):
@@ -248,6 +251,8 @@ class MUCBot(slixmpp.ClientXMPP):
         if msg['mucnick'] == self.nick:
             return
 
+        muc = msg['from'].bare
+
         cleaned_body = remove_fallbacks(
                 msg['body'],
                 msg['fallbacks']
@@ -256,7 +261,7 @@ class MUCBot(slixmpp.ClientXMPP):
         if cleaned_body.startswith("!refresh"):
             await fetch_xeps()
             self.send_message(
-                mto=msg['from'].bare,
+                mto=muc,
                 mbody=f"Index has been refreshed, {msg['from'].resource}",
                 mtype=msg['type']
             )
@@ -266,7 +271,10 @@ class MUCBot(slixmpp.ClientXMPP):
             if xep_query.isdigit():
                 xep_num = int(xep_query)
 
-                xep = xeps_by_number.get(int(xep_num))
+                now = time.time()
+                last_defined_timestamp[(str(muc), xep_num)] = now
+
+                xep = xeps_by_number.get(xep_num)
 
             else:
                 xep = xeps_by_title.get(xep_query)
@@ -278,24 +286,38 @@ class MUCBot(slixmpp.ClientXMPP):
                 preview_txt = create_with_abstract(xep)
 
             self.send_message(
-                mto=msg['from'].bare,
+                mto=muc,
                 mbody=preview_txt,
                 mtype=msg['type']
             )
         else:
-            xep_nums = set(XEP_PATTERN.findall(cleaned_body))
+            xep_nums = XEP_PATTERN.findall(cleaned_body)
 
-            for xep_num in xep_nums:
-                xep = xeps_by_number.get(int(xep_num))
+            for xep_num_str in xep_nums:
+                xep_num: int = int(xep_num_str)
+
+                # get when the bot last responded to the xep mention
+                xep_last_defined: float = last_defined_timestamp.get((str(muc), xep_num), 0)
+
+                # if its been less than n seconds
+                now = time.time()
+                n = int(login.get("timeout"))
+                if n is not None and (now - xep_last_defined) < n: #1_800: # seconds
+                    continue
+
+                # we're now defining it
+                last_defined_timestamp[(str(muc), xep_num)] = now
+
+                xep = xeps_by_number.get(xep_num)
 
                 if xep is None:
-                    print("unknown xep", xep_num)
+                    print("unknown xep", xep_num_str)
                     continue
 
                 preview_txt = create_preview_txt(xep)
 
                 self.send_message(
-                    mto=msg['from'].bare,
+                    mto=muc,
                     mbody=preview_txt,
                     mtype=msg['type']
                 )

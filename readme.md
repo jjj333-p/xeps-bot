@@ -38,6 +38,7 @@ Create a `login.json` file in the project root:
   "jid": "bot@example.com",
   "password": "your-xmpp-password",
   "displayname": "XEPs Bot",
+  "timeout": 1800,
   "rooms": [
     "room@conference.example.com"
   ]
@@ -45,9 +46,10 @@ Create a `login.json` file in the project root:
 ```
 ### `login.json` parameters
 
-| Parameter        | Description                                       |
-|------------------|---------------------------------------------------|
-| `jid`            | The XMPP account JID used by the bot.             |
-| `password`       | Password for the XMPP account.                    |
-| `displayname`    | Nickname used when joining MUC rooms.             |
-| `rooms`          | List of MUC room JIDs to join on startup.         |
+| Parameter     | Description                                                                                          |
+|---------------|------------------------------------------------------------------------------------------------------|
+| `jid`         | The XMPP account JID used by the bot.                                                                |
+| `password`    | Password for the XMPP account.                                                                       |
+| `displayname` | Nickname used when joining MUC rooms.                                                                |
+| `timeout`     | (**Optional**) Cooldown in seconds after the xep was last defined before the bot can define it again | 
+| `rooms`       | List of MUC room JIDs to join on startup.                                                            |
