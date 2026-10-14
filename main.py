@@ -301,7 +301,7 @@ class MUCBot(slixmpp.ClientXMPP):
 
                 # if its been less than n seconds
                 now = time.time()
-                n = int(login.get("timeout"))
+                n = int(login.get("timeout", 1_800))
                 if n is not None and (now - xep_last_defined) < n: #1_800: # seconds
                     continue
 
