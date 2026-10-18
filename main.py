@@ -191,15 +191,18 @@ class MUCBot(slixmpp.ClientXMPP):
 
         # join configured rooms
         for room in self.rooms:
-            await self.plugin['xep_0045'].join_muc_wait(
-                room,
-                self.nick,
-                presence_options=PresenceArgs(
-                    pstatus=status_msg
-                ),
-                maxchars=0,
-            )
-
+            try:
+                await self.plugin['xep_0045'].join_muc_wait(
+                    room,
+                    self.nick,
+                    presence_options=PresenceArgs(
+                        pstatus=status_msg
+                    ),
+                    maxchars=0,
+                )
+            except Exception as e:
+                print(f"unable to join muc room {room}: {str(e)}",)
+                continue
         while True:
             await asyncio.sleep(86_400)
             await fetch_xeps()
