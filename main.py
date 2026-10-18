@@ -124,7 +124,7 @@ def get_git_info() -> tuple[str, str]:
             url = url.replace(":", "/").replace("git@", "https://")
 
     except Exception:
-        # Fails silently if git is not installed or it's not a git repository
+        # Fails silently if git is not installed, or it's not a git repository
         pass
 
     return version, url
@@ -173,7 +173,7 @@ class MUCBot(slixmpp.ClientXMPP):
         self.add_event_handler("session_start", self.start)
 
         # The groupchat_message event is triggered whenever a message
-        # stanza is received from any chat room. If you also also
+        # stanza is received from any chat room. If you also
         # register a handler for the 'message' event, MUC messages
         # will be processed by both handlers.
         self.add_event_handler("message", self.message)
@@ -322,7 +322,7 @@ class MUCBot(slixmpp.ClientXMPP):
                 # get when the bot last responded to the xep mention
                 xep_last_defined: float = last_defined_timestamp.get((str(muc), xep_num), 0)
 
-                # if its been less than n seconds
+                # if it's been less than n seconds
                 now = time.time()
                 n = int(login.get("timeout", 1_800))
                 if n is not None and (now - xep_last_defined) < n:  # 1_800: # seconds
