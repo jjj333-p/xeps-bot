@@ -31,21 +31,12 @@ from slixmpp.types import PresenceArgs
 
 XEP_PATTERN = re.compile(r'(?i)(?<!\S)xep[- ]?(\d+)')
 
-xeps_by_number: dict[int, list[ET.Element]] = {}
-xeps_by_title: dict[str, list[ET.Element]] = {}
+xeps_by_number: dict[int, ET.Element] = {}
+xeps_by_title: dict[str, ET.Element] = {}
 
 # lazy man's method to preventing port exhaustion
 # they could still dos the bot but whatever
 fetch_lock = asyncio.Lock()
-
-# literally just a helper function so that I can use a little bit of type hinting to not completely fuck this up
-def append_or_create(d: dict[str | int, list[ET.Element]], key: str | int, value: ET.Element) -> None:
-    boxed = [value]
-    if key in d:
-        d[key] += boxed
-    else:
-        d[key] = boxed
-
 
 async def fetch_xeps():
     async with fetch_lock:
@@ -63,15 +54,13 @@ async def fetch_xeps():
                         continue
 
                     if number.isdigit():
-                        append_or_create(xeps_by_number, int(number), xep)
+                        xeps_by_number[int(number)] = xep
 
-                    # xeps_by_title[title] = xep
-                    append_or_create(xeps_by_title, title, xep)
+                    xeps_by_title[title] = xep
                     if short_name is not None:
-                        append_or_create(xeps_by_title, short_name, xep)
+                        xeps_by_title[short_name] = xep
 
-
-def create_preview_txt(xep: ET.Element):
+def create_preview_txt(xep : ET.Element):
     # traverse xml
     num_txt = xep.findtext("number")
     number = int(num_txt if num_txt is not None and num_txt.isdigit() else "0")
@@ -90,15 +79,13 @@ def create_preview_txt(xep: ET.Element):
 
     return out
 
-
-def create_with_abstract(xep: ET.Element):
+def create_with_abstract(xep : ET.Element):
     out = create_preview_txt(xep)
     abstract = xep.findtext("abstract")
     if abstract:
         return f"{out}\n> {'\n> '.join(abstract.split("\n"))}"
     else:
         return out
-
 
 def get_git_info() -> tuple[str, str]:
     """
@@ -129,11 +116,9 @@ def get_git_info() -> tuple[str, str]:
 
     return version, url
 
-
 git_version, repo_url = get_git_info()
 
 status_msg = f"XEPsBot v{git_version} | Source: {repo_url}"
-
 
 def remove_fallbacks(body: str, fallbacks: Iterable[str]) -> str:
     # get out fallback ranges for features we support
@@ -155,12 +140,10 @@ def remove_fallbacks(body: str, fallbacks: Iterable[str]) -> str:
 
     return "".join(result).strip()
 
-
 with open("./login.json", encoding="utf-8") as lf:
     login = json.load(lf)
 
 last_defined_timestamp: dict[tuple[str, int], float] = {}
-
 
 class MUCBot(slixmpp.ClientXMPP):
 
@@ -209,9 +192,9 @@ class MUCBot(slixmpp.ClientXMPP):
 
     async def invite(self, msg):
         """
-        Handler triggered when a Direct MUC Invite (XEP-0249) is received.
-        The plugin parses the XML and exposes it through message['xep_0249'].
-        """
+                Handler triggered when a Direct MUC Invite (XEP-0249) is received.
+                The plugin parses the XML and exposes it through message['xep_0249'].
+                """
         # Extract the invite payload
         invite = msg['groupchat_invite']
 
@@ -243,6 +226,7 @@ class MUCBot(slixmpp.ClientXMPP):
             print(f"Failed to join {room_jid}: {e}")
             return
 
+
         # Add room to login.json and save
         try:
             with open("./login.json", "r", encoding="utf-8") as lf:
@@ -260,10 +244,10 @@ class MUCBot(slixmpp.ClientXMPP):
             print(f"Failed to update login.json: {e}")
 
         self.send_message(
-            mto=room_jid,
-            mbody=f"Joined muc as I was invited by `{sender}` with reason `{reason}` .",
-            mtype="groupchat"
-        )
+                mto=room_jid,
+                mbody=f"Joined muc as I was invited by `{sender}` with reason `{reason}` .",
+                mtype="groupchat"
+            )
 
     async def message(self, msg):
         # dont respond to self
@@ -273,8 +257,8 @@ class MUCBot(slixmpp.ClientXMPP):
         muc = msg['from'].bare
 
         cleaned_body = remove_fallbacks(
-            msg['body'],
-            msg['fallbacks']
+                msg['body'],
+                msg['fallbacks']
         )
 
         if cleaned_body.startswith("!refresh"):
@@ -293,16 +277,16 @@ class MUCBot(slixmpp.ClientXMPP):
                 now = time.time()
                 last_defined_timestamp[(str(muc), xep_num)] = now
 
-                xeps = xeps_by_number.get(xep_num)
+                xep = xeps_by_number.get(xep_num)
 
             else:
-                xeps = xeps_by_title.get(xep_query)
+                xep = xeps_by_title.get(xep_query)
 
-            if xeps is None:
+            if xep is None:
                 print("unknown xep", xep_query)
                 preview_txt = f"Unknown xep {xep_query}"
             else:
-                preview_txt = "\n".join(create_with_abstract(xep) for xep in xeps)
+                preview_txt = create_with_abstract(xep)
 
             self.send_message(
                 mto=muc,
@@ -315,29 +299,25 @@ class MUCBot(slixmpp.ClientXMPP):
             for xep_num_str in xep_nums:
                 xep_num: int = int(xep_num_str)
 
-                # we use 0000 as our fallback for all xeps not assigned a number
-                if xep_num == 0:
-                    continue
-
                 # get when the bot last responded to the xep mention
                 xep_last_defined: float = last_defined_timestamp.get((str(muc), xep_num), 0)
 
                 # if it's been less than n seconds
                 now = time.time()
                 n = int(login.get("timeout", 1_800))
-                if n is not None and (now - xep_last_defined) < n:  # 1_800: # seconds
+                if n is not None and (now - xep_last_defined) < n: #1_800: # seconds
                     continue
 
                 # we're now defining it
                 last_defined_timestamp[(str(muc), xep_num)] = now
 
-                xeps = xeps_by_number.get(xep_num)
+                xep = xeps_by_number.get(xep_num)
 
-                if xeps is None or len(xeps) < 1:
+                if xep is None:
                     print("unknown xep", xep_num_str)
                     continue
 
-                preview_txt = create_preview_txt(xeps[0])
+                preview_txt = create_preview_txt(xep)
 
                 self.send_message(
                     mto=muc,
@@ -347,6 +327,7 @@ class MUCBot(slixmpp.ClientXMPP):
 
 
 if __name__ == '__main__':
+
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)-8s %(message)s')
 
