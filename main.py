@@ -98,6 +98,8 @@ def create_preview_txt(xep: ET.Element):
     number = int(num_txt if num_txt is not None and num_txt.isdigit() else "0")
     title = xep.findtext("title")
     status = xep.findtext("status")
+    if status == "Draft":
+        status = "Stable"
     last_rev = xep.find("last-revision")
     last_rev_date = last_rev.findtext("date") if last_rev is not None else None
     last_rev_version = last_rev.findtext("version") if last_rev is not None else None
