@@ -56,10 +56,13 @@ def get_ver_string(xep: ET.Element) -> str:
     version_str = last_revision.findtext("version") if last_revision is not None else None
     return version_str or ""
 
+headers = {
+    "User-Agent": "xeps-bot/1.0 (+https://github.com/jjj333-p/xeps-bot)"
+}
 
 async def fetch_xeps():
     async with fetch_lock:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get("https://xmpp.org/extensions/xeplist.xml") as resp:
                 xeplisttxt = await resp.text()
                 xeplistxml = ET.fromstring(xeplisttxt)
