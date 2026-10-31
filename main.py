@@ -27,6 +27,7 @@ from collections.abc import Iterable
 
 import aiohttp
 import slixmpp
+# noinspection protected-member
 from slixmpp.types import PresenceArgs
 
 XEP_PATTERN = re.compile(r'(?i)(?<!\S)xep[- ]?(\d+)')
@@ -38,6 +39,24 @@ xeps_by_title: dict[str, ET.Element] = {}
 # they could still dos the bot but whatever
 fetch_lock = asyncio.Lock()
 
+
+def parse_version(version_string: str) -> tuple[int, int, int]:
+    version_parts = version_string.split(".")
+    parts_count = len(version_parts)
+
+    major = int(version_parts[0]) if version_parts[0].isdigit() else 0
+    minor = int(version_parts[1]) if parts_count > 1 and version_parts[1].isdigit() else 0
+    patch = int(version_parts[2]) if parts_count > 2 and version_parts[2].isdigit() else 0
+
+    return major, minor, patch
+
+
+def get_ver_string(xep: ET.Element) -> str:
+    last_revision = xep.find("last-revision")
+    version_str = last_revision.findtext("version") if last_revision is not None else None
+    return version_str or ""
+
+
 async def fetch_xeps():
     async with fetch_lock:
         async with aiohttp.ClientSession() as session:
@@ -46,21 +65,34 @@ async def fetch_xeps():
                 xeplistxml = ET.fromstring(xeplisttxt)
 
                 for xep in xeplistxml.findall("xep"):
-                    number = xep.findtext("number")
+                    number_str = xep.findtext("number")
                     title = xep.findtext("title")
                     short_name = xep.findtext("shortname")
 
-                    if number is None or title is None:
+                    if number_str is None or title is None:
                         continue
 
-                    if number.isdigit():
-                        xeps_by_number[int(number)] = xep
+                    if not number_str.isdigit():
+                        continue
+                    number = int(number_str)
+
+                    replacing = xeps_by_number.get(number)
+
+                    if replacing is not None:
+                        this_ver = parse_version(get_ver_string(xep))
+                        replacing_ver = parse_version(get_ver_string(replacing))
+
+                        if not this_ver > replacing_ver:
+                            continue
+
+                    xeps_by_number[number] = xep
 
                     xeps_by_title[title] = xep
                     if short_name is not None:
                         xeps_by_title[short_name] = xep
 
-def create_preview_txt(xep : ET.Element):
+
+def create_preview_txt(xep: ET.Element):
     # traverse xml
     num_txt = xep.findtext("number")
     number = int(num_txt if num_txt is not None and num_txt.isdigit() else "0")
@@ -79,13 +111,15 @@ def create_preview_txt(xep : ET.Element):
 
     return out
 
-def create_with_abstract(xep : ET.Element):
+
+def create_with_abstract(xep: ET.Element):
     out = create_preview_txt(xep)
     abstract = xep.findtext("abstract")
     if abstract:
         return f"{out}\n> {'\n> '.join(abstract.split("\n"))}"
     else:
         return out
+
 
 def get_git_info() -> tuple[str, str]:
     """
@@ -116,10 +150,13 @@ def get_git_info() -> tuple[str, str]:
 
     return version, url
 
+
 git_version, repo_url = get_git_info()
 
 status_msg = f"XEPsBot v{git_version} | Source: {repo_url}"
 
+
+# noinspection bad-index
 def remove_fallbacks(body: str, fallbacks: Iterable[str]) -> str:
     # get out fallback ranges for features we support
     ranges_to_remove = []
@@ -140,10 +177,12 @@ def remove_fallbacks(body: str, fallbacks: Iterable[str]) -> str:
 
     return "".join(result).strip()
 
+
 with open("./login.json", encoding="utf-8") as lf:
     login = json.load(lf)
 
 last_defined_timestamp: dict[tuple[str, int], float] = {}
+
 
 class MUCBot(slixmpp.ClientXMPP):
 
@@ -184,7 +223,7 @@ class MUCBot(slixmpp.ClientXMPP):
                     maxchars=0,
                 )
             except Exception as e:
-                print(f"unable to join muc room {room}: {str(e)}",)
+                print(f"unable to join muc room {room}: {str(e)}", )
                 continue
         while True:
             await asyncio.sleep(86_400)
@@ -226,7 +265,6 @@ class MUCBot(slixmpp.ClientXMPP):
             print(f"Failed to join {room_jid}: {e}")
             return
 
-
         # Add room to login.json and save
         try:
             with open("./login.json", "r", encoding="utf-8") as lf:
@@ -244,10 +282,10 @@ class MUCBot(slixmpp.ClientXMPP):
             print(f"Failed to update login.json: {e}")
 
         self.send_message(
-                mto=room_jid,
-                mbody=f"Joined muc as I was invited by `{sender}` with reason `{reason}` .",
-                mtype="groupchat"
-            )
+            mto=room_jid,
+            mbody=f"Joined muc as I was invited by `{sender}` with reason `{reason}` .",
+            mtype="groupchat"
+        )
 
     async def message(self, msg):
         # dont respond to self
@@ -257,8 +295,8 @@ class MUCBot(slixmpp.ClientXMPP):
         muc = msg['from'].bare
 
         cleaned_body = remove_fallbacks(
-                msg['body'],
-                msg['fallbacks']
+            msg['body'],
+            msg['fallbacks']
         )
 
         if cleaned_body.startswith("!refresh"):
@@ -305,7 +343,7 @@ class MUCBot(slixmpp.ClientXMPP):
                 # if it's been less than n seconds
                 now = time.time()
                 n = int(login.get("timeout", 1_800))
-                if n is not None and (now - xep_last_defined) < n: #1_800: # seconds
+                if n is not None and (now - xep_last_defined) < n:  # 1_800: # seconds
                     continue
 
                 # we're now defining it
@@ -327,7 +365,6 @@ class MUCBot(slixmpp.ClientXMPP):
 
 
 if __name__ == '__main__':
-
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)-8s %(message)s')
 
