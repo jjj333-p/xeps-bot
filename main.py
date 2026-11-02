@@ -30,7 +30,7 @@ import slixmpp
 # noinspection protected-member
 from slixmpp.types import PresenceArgs
 
-XEP_PATTERN = re.compile(r'(?i)(?<!\S)xep[- ]?(\d+)')
+XEP_PATTERN = re.compile(r'(?i)\bxep[- ]?(\d+)\b')
 
 xeps_by_number: dict[int, ET.Element] = {}
 xeps_by_title: dict[str, ET.Element] = {}
